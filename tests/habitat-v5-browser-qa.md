@@ -42,3 +42,13 @@ Verified on 2026-10-04 using the isolated QA origin at desktop and 511×807:
 - Switching from sofa to plant keeps arranging active. Real pointer drag moves the plant from 74.2263% to 80% without exiting or losing selection. Clicking blank space then completes placement; reload retains the 80% position.
 - The explicit Finish Placement action uses the same completion path. The document listener is installed once, ignores interactive controls and dialogs, and only runs while the home panel is present.
 - No browser console errors. Screenshot: `outputs/home-click-outside-finish.png` in the chat workspace.
+
+## Per-pose wearable fitting
+
+Verified on 2026-10-04 using a browser comparison page rendering the actual `companionArt` and `itemArt` modules:
+- Reviewed all four species and four stages with all 11 accessories: beret, flower, crown, bow, aurora tiara, both scarves, neck bow and three badges. Checked individual accessories plus crown/scarf/badge combinations. The comparison enlarged young stages to inspect their geometry; the actual wardrobe check retained normal growth scaling and animation.
+- Replaced legacy SVG-box offsets with separate brim, ear-clip, neck and badge anchors for every portrait. Tight raster aspect ratios are preserved instead of squeezing every accessory into a shared rectangle.
+- Crowns sit above the eyes; ear clips stay at the ear roots; prone cat wears a side-tied scarf and attached neck-side badge. Sitting and holding-object poses use smaller neckwear; guardians no longer inherit oversized hats.
+- Actual 511×807 wardrobe flow: equipped cat crown and green scarf, reloaded, selected cat again and observed both still equipped. Verified young cat and guardian cat. Removed scarf with the ordinary inventory control and inspected the guardian crown against the original reported case. No console errors.
+- 15 existing companion/personality/habitat tests pass. A render sweep checked all 176 accessory/portrait combinations for valid markup and finite geometry.
+- Evidence outside repository: `outputs/wearables-all-stages.png`, `outputs/wearables-guardian-crowns.png`, `outputs/wearables-cat-mobile.png` in the chat workspace.
