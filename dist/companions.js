@@ -7,10 +7,10 @@ export const SKINS={
  red:{name:'珊瑚红',main:'#b74343',dark:'#853030',tint:'#fce5e3',paper:'#fff8f5',ink:'#572d2b',muted:'#8c6966',line:'#efd7d2'}
 };
 export const PETS={
- fox:{name:'小狐狸',row:0,effect:'暖阳闪光',stages:['林间幼崽','绿衣伙伴','森林探险家','太阳守护者'],accent:'#ec9246',spark:'✦'},
- rabbit:{name:'小兔子',row:1,effect:'花瓣轻舞',stages:['软萌幼崽','花间伙伴','花园探险家','花园守护者'],accent:'#db74a3',spark:'❋'},
- panda:{name:'熊猫团团',row:2,effect:'竹林光环',stages:['竹林幼崽','竹叶伙伴','竹林探险家','竹林守护者'],accent:'#389f7b',spark:'❖'},
- cat:{name:'小猫咪',row:3,effect:'星光旋转',stages:['好奇幼崽','星衣伙伴','星夜探险家','星空守护者'],accent:'#9374d3',spark:'✧'}
+ fox:{name:'狐狸阿橙',nickname:'阿橙',row:0,effect:'暖阳闪光',stages:['林间幼崽','绿衣伙伴','森林探险家','太阳守护者'],accent:'#ec9246',spark:'✦'},
+ rabbit:{name:'兔子朵朵',nickname:'朵朵',row:1,effect:'花瓣轻舞',stages:['软萌幼崽','花间伙伴','花园探险家','花园守护者'],accent:'#db74a3',spark:'❋'},
+ panda:{name:'熊猫团团',nickname:'团团',row:2,effect:'竹林光环',stages:['竹林幼崽','竹叶伙伴','竹林探险家','竹林守护者'],accent:'#389f7b',spark:'❖'},
+ cat:{name:'猫咪星米',nickname:'星米',row:3,effect:'星光旋转',stages:['好奇幼崽','星衣伙伴','星夜探险家','星空守护者'],accent:'#9374d3',spark:'✧'}
 };
 export const LEVELS=[0,60,180,360];
 export const petId=id=>Object.hasOwn(PETS,id)?id:'fox';

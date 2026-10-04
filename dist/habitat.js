@@ -1,11 +1,14 @@
+import {FURNITURE_ART} from './furniture-art-data.js';
+import {EXTRA_ITEMS,enrichItem} from './habitat-catalog.js';
 import {PETS,petId} from './companions.js';
 
 export const ROOMS={
  lounge:{name:'暖暖客厅',short:'客厅',tag:'一起分享今天的小进步',icon:'home'},
  study:{name:'星光书房',short:'书房',tag:'好奇心，住在每一本书里',icon:'book'},
- garden:{name:'晴日花园',short:'花园',tag:'晒晒太阳，慢慢长大',icon:'leaf'}
+ garden:{name:'晴日花园',short:'花园',tag:'把阳光和花香，收进自己的小天地',icon:'leaf'},
+ bedroom:{name:'星眠卧室',short:'卧室',tag:'收藏今天的美好，做一个柔软的梦',icon:'moon'}
 };
-export const CATEGORIES={all:'全部好物',furniture:'家具',decor:'小摆件',rug:'地毯',wall:'墙面',floor:'地板',accessory:'伙伴配饰'};
+export const CATEGORIES={all:'全部好物',furniture:'家具',decor:'摆件 / 挂饰',rug:'地毯',wall:'墙面 / 天空',floor:'地板 / 地面',accessory:'伙伴配饰'};
 const item=(id,name,category,price,art,color,description,slot=category)=>({id,name,category,price,art,color,description,slot});
 export const ITEMS=[
  item('wall-cream','奶油暖墙','wall',0,'wall','#f3e4c8','温暖的小屋，从这里开始。'),
@@ -47,19 +50,21 @@ export const ITEMS=[
  item('decor-musicbox','月鹿水晶音乐盒','decor',1500,'musicbox','#b7b2db','水晶罩里的小鹿与弯月，住在雕花音乐盒上。'),
  item('furniture-glasshouse','繁花玻璃花房','furniture',2400,'glasshouse','#93baa4','拱形玻璃穹顶、攀缘玫瑰与小茶桌，一座四季花园。')
 ];
+ITEMS.push(...EXTRA_ITEMS);
 // Original purchase amounts stay fixed when the shop catalogue changes.
 const NEW_PRICES={20:100,25:125,30:150,35:180,40:220,45:240,50:280,55:300,60:360,65:360,85:480,90:540};
 const SELECT_PRICES={'wall-night':360,'rug-star':420,'shelf-story':460,'piano-sky':720,'tent-moon':840,'head-crown':520};
 for(const item of ITEMS){
+ enrichItem(item);
  item.legacyPrice=item.price;
  item.previousPrice=NEW_PRICES[item.price]??item.price;
  item.price=SELECT_PRICES[item.id]??item.previousPrice;
  item.tier=item.price>=900?'heirloom':item.price>=250?'select':'everyday';
 }
-export const SHOP_TIERS={everyday:{name:'日常好物',range:'100–240'},select:{name:'精心之选',range:'280–840'},heirloom:{name:'典藏珍品',range:'900–2400'}};
+export const SHOP_TIERS={everyday:{name:'日常好物',range:'100–240'},select:{name:'精心之选',range:'280–840'},heirloom:{name:'典藏珍品',range:'900–3200'}};
 export const ITEM_BY_ID=Object.fromEntries(ITEMS.map(x=>[x.id,x]));
 export const WELCOME_COINS=80;
-export const SLOTS={wall:'墙面',floor:'地板',rug:'地毯',furniture:'家具',decor:'摆件'};
+export const SLOTS={wall:'背景',floor:'地面',rug:'地毯',furniture:'家具',decor:'摆件 / 挂饰'};
 export const WEAR_SLOTS={head:'头饰',neck:'围巾 / 领结',charm:'胸章'};
 const valid=(obj,key)=>typeof key==='string'&&Object.hasOwn(obj,key);
 const dayKey=date=>{const d=new Date(date);return Number.isFinite(d.getTime())?new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'}).format(d):null;};
@@ -79,22 +84,28 @@ export function normalizeHabitat(value,history=[]){
  const budget=earnedCoins(history),purchases=[],seen=new Set();let spent=0;
  for(const p of Array.isArray(value?.purchases)?value.purchases:[]){
   if(!valid(ITEM_BY_ID,p?.itemId)||seen.has(p.itemId))continue;const item=ITEM_BY_ID[p.itemId];
-  const paid=Number.isFinite(p.paid)&&[item.legacyPrice,item.previousPrice,item.price].includes(p.paid)?p.paid:value?.version!==2?item.legacyPrice:item.price;
+  const paid=Number.isFinite(p.paid)&&[item.legacyPrice,item.previousPrice,item.price].includes(p.paid)?p.paid:!value?.version||value.version<2?item.legacyPrice:item.price;
   if(!item.price||spent+paid>budget)continue;
   purchases.push({itemId:item.id,date:typeof p.date==='string'?p.date:'',paid});seen.add(item.id);spent+=paid;
  }
  const owned=new Set([...ITEMS.filter(i=>i.price===0).map(i=>i.id),...seen]);
- const defaults={wall:'wall-cream',floor:'floor-oak',rug:'rug-sun',furniture:'sofa-cloud',decor:'plant-sprout'};
- const rooms=Object.fromEntries(Object.keys(ROOMS).map(room=>[room,Object.fromEntries(Object.keys(SLOTS).map(slot=>{
-  const id=value?.rooms?.[room]?.[slot];return [slot,owned.has(id)&&ITEM_BY_ID[id]?.category===slot?id:defaults[slot]];
- }))]));
+ const rooms=Object.fromEntries(Object.keys(ROOMS).map(room=>{
+  const old=value?.rooms?.[room],defaults=roomDefaults(room),result={};
+  for(const slot of ['wall','floor']){const id=old&&Object.hasOwn(old,slot)?old[slot]:defaults[slot];result[slot]=id===null?null:owned.has(id)&&ITEM_BY_ID[id]?.category===slot&&canPlaceInRoom(id,room)?id:defaults[slot];}
+  let objects;
+  if(Array.isArray(old?.objects))objects=old.objects;
+  else if(old){objects=['rug','furniture','decor'].flatMap(category=>{const id=Object.hasOwn(old,category)?old[category]:defaults.objects.find(o=>ITEM_BY_ID[o.itemId].category===category)?.itemId;return id?[{itemId:id,...defaultPlacement(id,room)}]:[];});}
+  else objects=defaults.objects;
+  const placed=new Set();result.objects=objects.filter(o=>o&&owned.has(o.itemId)&&canPlaceInRoom(o.itemId,room)&&isMovable(o.itemId)&&!placed.has(o.itemId)&&placed.add(o.itemId)).map(o=>({itemId:o.itemId,...clampItemPosition(room,o.itemId,o)}));
+  return [room,result];
+ }));
  const residents=Object.fromEntries(Object.keys(PETS).map(id=>[id,valid(ROOMS,value?.residents?.[id])?value.residents[id]:'lounge']));
  const outfits=Object.fromEntries(Object.keys(PETS).map(id=>[id,Object.fromEntries(Object.keys(WEAR_SLOTS).map(slot=>{
   const key=value?.outfits?.[id]?.[slot];return [slot,owned.has(key)&&ITEM_BY_ID[key]?.category==='accessory'&&ITEM_BY_ID[key].slot===slot?key:null];
  }))]));
  const wishlist=[...new Set((Array.isArray(value?.wishlist)?value.wishlist:[]).filter(id=>valid(ITEM_BY_ID,id)&&!owned.has(id)))];
  const positions=Object.fromEntries(Object.keys(ROOMS).map(room=>[room,Object.fromEntries(Object.keys(PETS).map((pet,i)=>[pet,clampPosition(value?.positions?.[room]?.[pet],{x:18+i*64/3,y:8})]))]));
- return {version:2,purchases,rooms,residents,positions,outfits,wishlist};
+ return {version:3,purchases,rooms,residents,positions,outfits,wishlist};
 }
 export function ownedItems(state){return new Set([...ITEMS.filter(i=>!i.price).map(i=>i.id),...state.purchases.map(p=>p.itemId)]);}
 export function wallet(state,history=[]){const earned=earnedCoins(history),spent=state.purchases.reduce((n,p)=>n+p.paid,0);return {earned,spent,balance:earned-spent};}
@@ -107,7 +118,21 @@ export function buyItem(value,history,id,date=new Date().toISOString()){
 export function decorateRoom(value,history,room,id){
  const state=normalizeHabitat(value,history),item=ITEM_BY_ID[id];
  if(!valid(ROOMS,room)||!valid(ITEM_BY_ID,id)||!valid(SLOTS,item.category)||!ownedItems(state).has(id))throw Error('先把这件装饰收入收藏吧');
- state.rooms[room][item.category]=id;return state;
+ if(!canPlaceInRoom(id,room))throw Error('这件好物适合放在'+item.rooms.map(r=>ROOMS[r].short).join('、'));
+ if(['wall','floor'].includes(item.category))state.rooms[room][item.category]=id;
+ else if(!state.rooms[room].objects.some(o=>o.itemId===id))state.rooms[room].objects.push({itemId:id,...suggestPlacement(id,room,state.rooms[room].objects)});
+ return state;
+}
+export function removeRoomItem(value,history,room,id){
+ const state=normalizeHabitat(value,history);if(!valid(ROOMS,room))throw Error('没有找到这个房间');
+ for(const slot of ['wall','floor'])if(state.rooms[room][slot]===id)state.rooms[room][slot]=null;
+ state.rooms[room].objects=state.rooms[room].objects.filter(o=>o.itemId!==id);return state;
+}
+export function clearRoom(value,history,room){const state=normalizeHabitat(value,history);if(!valid(ROOMS,room))throw Error('没有找到这个房间');state.rooms[room]={wall:null,floor:null,objects:[]};return state;}
+export function moveRoomItem(value,history,room,id,point){
+ const state=normalizeHabitat(value,history),object=(valid(ROOMS,room)?state.rooms[room].objects:[]).find(o=>o.itemId===id);
+ if(!object)throw Error('请先把好物摆进房间');if(!canPlaceAt(room,id,point))throw Error('请放在高亮区域内');
+ Object.assign(object,{x:point.x,y:point.y});return state;
 }
 export function equipItem(value,history,pet,slot,id){
  const state=normalizeHabitat(value,history);
@@ -123,7 +148,7 @@ export function homeMilestones(state){
  const owned=ownedItems(state),dressed=Object.values(state.outfits).filter(o=>Object.values(o).some(Boolean)).length;
  return [{name:'第一件心头好',description:'购买一件好物',done:state.purchases.length>0},
  {name:'伙伴造型师',description:'为任意伙伴戴上配饰',done:dressed>0},
- {name:'房间设计师',description:'三个房间都摆上买来的好物',done:Object.values(state.rooms).every(r=>Object.values(r).some(id=>ITEM_BY_ID[id].price>0))},
+ {name:'房间设计师',description:'四个房间都摆上买来的好物',done:Object.values(state.rooms).every(r=>[r.wall,r.floor,...r.objects.map(o=>o.itemId)].some(id=>ITEM_BY_ID[id]?.price>0))},
  {name:'小屋收藏家',description:'拥有 12 件家具和配饰',done:owned.size>=12},
  {name:'整整齐齐一家人',description:'四位伙伴都有自己的配饰',done:dressed===4}];
 }
@@ -131,3 +156,30 @@ export function homeMilestones(state){
 export function clampPosition(point,fallback={x:50,y:8}){return {x:Math.max(12,Math.min(88,Number.isFinite(point?.x)?point.x:fallback.x)),y:Math.max(3,Math.min(24,Number.isFinite(point?.y)?point.y:fallback.y))};}
 export function positionPet(value,history,room,pet,point){const state=normalizeHabitat(value,history);if(!valid(ROOMS,room)||!valid(PETS,pet))throw Error('没有找到这个伙伴');state.positions[room][pet]=clampPosition(point,state.positions[room][pet]);return state;}
 export function resetPositions(value,history,room){const state=normalizeHabitat(value,history);if(!valid(ROOMS,room))throw Error('没有找到这个房间');Object.keys(PETS).forEach((pet,i)=>state.positions[room][pet]={x:18+i*64/3,y:8});return state;}
+
+export const canPlaceInRoom=(id,room)=>valid(ROOMS,room)&&valid(ITEM_BY_ID,id)&&ITEM_BY_ID[id].rooms.includes(room);
+export const isMovable=id=>valid(ITEM_BY_ID,id)&&!['wall','floor','accessory'].includes(ITEM_BY_ID[id].category);
+export const ZONE_NAMES={wall:'墙面区域',ground:'地面区域',rug:'地面铺设区'};
+export function placementBounds(room,id){
+ const item=ITEM_BY_ID[id];if(!item||!isMovable(id)||!canPlaceInRoom(id,room))return null;
+ const frame=FURNITURE_ART[id],ratio=item.zone==='rug'?(item.category==='rug'?3.4:2.5):frame?frame.window[2]/frame.window[3]:1,height=item.size*2/ratio,half=item.size/2;return {left:item.zone==='wall'&&room!=='study'?30+half:half+3,right:item.zone==='wall'&&room==='study'?68-half:97-half,top:item.zone==='wall'?Math.max(30,height+3):item.zone==='rug'?Math.max(80,66+height):Math.max(72,height+3),bottom:item.zone==='wall'?55:96};
+}
+export function canPlaceAt(room,id,p){const b=placementBounds(room,id);return !!b&&Number.isFinite(p?.x)&&Number.isFinite(p?.y)&&p.x>=b.left&&p.x<=b.right&&p.y>=b.top&&p.y<=b.bottom;}
+export function clampItemPosition(room,id,p){const b=placementBounds(room,id);if(!b)return {x:50,y:80};const fallback=defaultPlacement(id,room);return {x:Math.max(b.left,Math.min(b.right,Number.isFinite(p?.x)?p.x:fallback.x)),y:Math.max(b.top,Math.min(b.bottom,Number.isFinite(p?.y)?p.y:fallback.y))};}
+export function defaultPlacement(id,room,index=0){const item=ITEM_BY_ID[id],b=placementBounds(room,id);if(!b)return {x:50,y:80};const x=item.zone==='wall'?70:item.category==='decor'?80:item.zone==='rug'?50:48+(index%3-1)*10;return {x:Math.max(b.left,Math.min(b.right,x)),y:Math.max(b.top,Math.min(b.bottom,item.zone==='wall'?43:item.zone==='rug'?94:86))};}
+function roomDefaults(room){
+ const objects=room==='garden'?['plant-sprout']:room==='bedroom'?['rug-sun','bed-basic','plant-sprout']:['rug-sun','sofa-cloud','plant-sprout'];
+ return {wall:room==='garden'?null:'wall-cream',floor:room==='garden'?null:'floor-oak',objects:objects.map(itemId=>({itemId,...defaultPlacement(itemId,room)}))};
+}
+
+// Find a quiet initial spot; users can still overlap objects deliberately while decorating.
+function suggestPlacement(id,room,objects){
+ const i=ITEM_BY_ID[id],b=placementBounds(room,id),base=defaultPlacement(id,room);
+ const peers=objects.filter(o=>ITEM_BY_ID[o.itemId].zone===i.zone);if(!peers.length)return base;
+ let best=base,score=Infinity;
+ for(let x=b.left;x<=b.right;x+=2){
+  const overlap=peers.reduce((sum,o)=>{const w=ITEM_BY_ID[o.itemId].size;return sum+Math.max(0,Math.min(x+i.size/2,o.x+w/2)-Math.max(x-i.size/2,o.x-w/2));},0);
+  const cost=overlap*100+Math.abs(x-base.x);if(cost<score){score=cost;best={x,y:base.y};}
+ }
+ return best;
+}
