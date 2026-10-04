@@ -52,3 +52,13 @@ Verified on 2026-10-04 using a browser comparison page rendering the actual `com
 - Actual 511×807 wardrobe flow: equipped cat crown and green scarf, reloaded, selected cat again and observed both still equipped. Verified young cat and guardian cat. Removed scarf with the ordinary inventory control and inspected the guardian crown against the original reported case. No console errors.
 - 15 existing companion/personality/habitat tests pass. A render sweep checked all 176 accessory/portrait combinations for valid markup and finite geometry.
 - Evidence outside repository: `outputs/wearables-all-stages.png`, `outputs/wearables-guardian-crowns.png`, `outputs/wearables-cat-mobile.png` in the chat workspace.
+
+## Twelve everyday goods
+
+Verified on 2026-10-04 on isolated QA storage:
+- Added 12 goods at 100–240 coins: oak stool, wicker basket, toy chest, book basket, bear cushion, mushroom footstool, birdhouse wall ornament, watering can, daisy planter, rabbit clock, sage mat and bedside cubby. All 12 appeared in the everyday filter with the expected names and prices.
+- Browser purchase: bought the 180-coin stool, wallet 8950 → 8770; used it from inventory, placed it in the room, and reloaded to confirm its position remained.
+- Visually reviewed all 12 actual sprite renderings in a comparison gallery. No adjacent-cell fragments, detached shadows or square image backgrounds. Original generated PNG is unchanged; sprite geometry comes from alpha outlines.
+- Inspected desktop room preview and 511×807 actual rooms. Garden flower box and watering can sit on grass; bedroom cabinet is below the bed head, rabbit clock stays on wall and sage mat lies flat. Changed birdhouse to an indoor wall ornament after the garden preview showed no suitable mounting surface; verified the revised indoor preview.
+- 20 habitat and placement tests pass, including new-good pricing, purchase totals, allowed-room placement, forbidden-room rejection and round-trip storage. Browser console has no errors.
+- Evidence outside repository in the chat workspace: `outputs/daily-goods-new.png` and `outputs/daily-goods-bedroom.png`.
