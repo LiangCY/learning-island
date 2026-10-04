@@ -25,7 +25,7 @@ export const EXTRA_ITEMS=[
 const meta={
  'sofa-cloud':{size:32},'sofa-mint':{size:32},'desk-oak':{size:28},'shelf-story':{size:24},'piano-sky':{size:27},'tent-moon':{size:28},
  'bench-garden':{rooms:['garden'],size:30},'furniture-glasshouse':{rooms:['garden'],size:29},
- 'plant-sprout':{rooms:ALL,size:15},'plant-bloom':{rooms:ALL,size:15},'frame-memory':{zone:'wall',size:13},
+ 'plant-sprout':{rooms:ALL,size:9},'plant-bloom':{rooms:ALL,size:15},'frame-memory':{zone:'wall',size:13},
  'floor-moss':{rooms:ALL},'decor-musicbox':{size:15},'decor-orbit':{size:16}
 };
 export function enrichItem(item){

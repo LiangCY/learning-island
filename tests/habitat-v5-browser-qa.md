@@ -26,3 +26,11 @@ Saved outside the repository under the chat's `outputs/` directory:
 - home-unified-preview-v5.png — live localhost shop detail showing matching furniture and room materials.
 
 Automated tests: `npm test`; detailed placement/migration/geometry/catalog checks are in `habitat-placement.test.mjs`. No new dependencies or external image URLs required.
+
+## Foreground and plant scale follow-up
+
+Verified on 2026-10-04 at 1280px and 511×807 on the isolated QA origin:
+- Placed rabbit at its rear limit (bottom 24%, computed layer 276) and sofa at the front limit (top 96%, layer 96). Rabbit remains fully visible above the overlapping sofa. Real pointer drag moves the rabbit across the sofa normally.
+- Furniture remains selectable in arranging mode (companions have pointer-events disabled there). Dragged the smaller plant from 80% to 74.2263% horizontally and observed the saved position.
+- New-sprout plant room width changed from 15% to 9%, a 40% reduction. Mobile rendered height is 55.06px versus sofa 104.51px. Verified the same 9% width in study; shop artwork sizing is independent and unchanged.
+- Browser console has no errors. Screenshot: `outputs/home-layer-scale-fix.png` in the chat workspace, outside the repository.
