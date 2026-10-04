@@ -6,6 +6,7 @@ outputs/
 .env
 .env.*
 *.log
+log/
 __pycache__/
 *.pyc
 # Legacy assets from removed experiences; current decks are included.
