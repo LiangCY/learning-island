@@ -34,3 +34,11 @@ Verified on 2026-10-04 at 1280px and 511×807 on the isolated QA origin:
 - Furniture remains selectable in arranging mode (companions have pointer-events disabled there). Dragged the smaller plant from 80% to 74.2263% horizontally and observed the saved position.
 - New-sprout plant room width changed from 15% to 9%, a 40% reduction. Mobile rendered height is 55.06px versus sofa 104.51px. Verified the same 9% width in study; shop artwork sizing is independent and unchanged.
 - Browser console has no errors. Screenshot: `outputs/home-layer-scale-fix.png` in the chat workspace, outside the repository.
+
+## Click outside to finish placement
+
+Verified on 2026-10-04 using the isolated QA origin at desktop and 511×807:
+- Selecting furniture from inventory enters arranging mode. Clicking empty room background or the blank page margin exits arranging mode, clears selection and hides placement bounds; companions return to full opacity.
+- Switching from sofa to plant keeps arranging active. Real pointer drag moves the plant from 74.2263% to 80% without exiting or losing selection. Clicking blank space then completes placement; reload retains the 80% position.
+- The explicit Finish Placement action uses the same completion path. The document listener is installed once, ignores interactive controls and dialogs, and only runs while the home panel is present.
+- No browser console errors. Screenshot: `outputs/home-click-outside-finish.png` in the chat workspace.
