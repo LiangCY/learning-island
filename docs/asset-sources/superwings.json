@@ -1,0 +1,22 @@
+{
+  "site": "https://www.superwings.es/personajes",
+  "images": {
+    "jett": "https://www.superwings.es/img/superwing_jett.png",
+    "dizzy": "https://www.superwings.es/img/superwing_dizzy.png",
+    "donnie": "https://www.superwings.es/img/superwing_donnie.png",
+    "jerome": "https://www.superwings.es/img/superwing_jerome.png",
+    "jimbo": "https://www.superwings.es/img/superwing_jimbo.png",
+    "mira": "https://www.superwings.es/img/superwing_mira.png",
+    "grandalbert": "https://www.superwings.es/img/superwing_grandalbert.png",
+    "paul": "https://www.superwings.es/img/superwing_paul.png",
+    "bello": "https://www.superwings.es/img/superwing_bello.png",
+    "astra": "https://www.superwings.es/img/superwing_astra.png",
+    "chace": "https://www.superwings.es/img/superwing_chace.png",
+    "todd": "https://www.superwings.es/img/superwing_todd.png",
+    "flip": "https://www.superwings.es/img/superwing_flip.png",
+    "sky": "https://www.superwings.es/img/superwing_sky.png",
+    "bigwing": "https://www.superwings.es/img/superwing_bigwing.png",
+    "poppa": "https://www.superwings.es/img/superwing_poppa.png"
+  },
+  "localDirectory": "dist/assets/cards/superwings"
+}

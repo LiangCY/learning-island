@@ -1,0 +1,13 @@
+node_modules/
+work/
+.DS_Store
+screenshots/
+outputs/
+.env
+.env.*
+*.log
+__pycache__/
+*.pyc
+# Legacy assets from removed experiences; current decks are included.
+dist/assets/games/
+dist/assets/cards/zootopia/

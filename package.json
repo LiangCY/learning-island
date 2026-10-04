@@ -1,0 +1,14 @@
+{
+  "name": "learning-island",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "学习探险岛：用练习、伙伴成长和收集，让小朋友每天进步一点点",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

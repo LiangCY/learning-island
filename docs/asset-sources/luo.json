@@ -1,0 +1,24 @@
+{
+  "referencePages": [
+    "https://luoxiaohei-movie.com/1st/character/",
+    "https://luoxiaohei-movie.com/2nd/character/"
+  ],
+  "images": {
+    "xiaohei": "https://luoxiaohei-movie.com/2nd/assets/img/chara/chara_01.png",
+    "wuxian": "https://luoxiaohei-movie.com/2nd/assets/img/chara/chara_02.png",
+    "luye": "https://luoxiaohei-movie.com/2nd/assets/img/chara/chara_03.png",
+    "nezha": "https://luoxiaohei-movie.com/2nd/assets/img/chara/chara_04.png",
+    "yudi": "https://luoxiaohei-movie.com/2nd/assets/img/chara/chara_05.png",
+    "lingyao": "https://luoxiaohei-movie.com/2nd/assets/img/chara/chara_06.png",
+    "ximuzi": "https://luoxiaohei-movie.com/2nd/assets/img/chara/chara_07.png",
+    "jiulao": "https://luoxiaohei-movie.com/2nd/assets/img/chara/chara_09.png",
+    "panjing": "https://luoxiaohei-movie.com/2nd/assets/img/chara/chara_10.png",
+    "jia": "https://luoxiaohei-movie.com/2nd/assets/img/chara/chara_11.png",
+    "yi": "https://luoxiaohei-movie.com/2nd/assets/img/chara/chara_12.png",
+    "fengxi": "https://luoxiaohei-movie.com/1st/assets/img/character/chara_03.png",
+    "luozhu": "https://luoxiaohei-movie.com/1st/assets/img/character/chara_04.png",
+    "xuhuai": "https://luoxiaohei-movie.com/1st/assets/img/character/chara_05.png",
+    "tianhu": "https://luoxiaohei-movie.com/1st/assets/img/character/chara_06.png",
+    "ruoshui": "https://luoxiaohei-movie.com/1st/assets/img/character/chara_08.png"
+  }
+}

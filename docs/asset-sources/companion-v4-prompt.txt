@@ -1,0 +1,17 @@
+Use case: stylized-concept. Asset: a single transparent character sprite atlas for a children's learning game, 3 by 3 grid (nine whole-body characters, absolutely no text, no grid lines). Use the three reference images ONLY for identity, fur rendering and costume style, NOT their poses. Match their charming high-quality softly lit storybook 3D fur, big warm expressive eyes.
+Each row is one species, each column is one growth stage. Generous transparent gutters and margins, all nine entirely inside their own equally sized cells, no overlap, no background or ground shadows. Every cell has exactly ONE character with held props attached to its body, so isolated silhouettes are easy to identify. Full ears, feet and tails visible.
+ROW 1 cream rabbit with pink ears:
+Column 1 unclothed little bunny sitting upright on tucked hind legs in a natural rabbit posture, long ears perked one gently tilted, both tiny forepaws resting naturally in front on its knees, tiny round tail BEHIND its body only. Never hold tail, no big fluffy tail in front.
+Column 2 older bunny standing on hind paws, daisy embroidered sage vest, holding an orange carrot with green top against chest, pleased bashful head tilt, both feet grounded.
+Column 3 garden explorer bunny in sage pocket apron and little shoulder satchel, crouching with one bent knee, both paws holding a small brass watering can angled down as if tending flowers. No detached water or flowers, keep watering can visibly attached to hands.
+ROW 2 black-white panda:
+Column 1 round little panda sitting wide-legged holding a leafy bamboo stem to its mouth, eating with happy eyes.
+Column 2 panda wearing green Chinese-button vest, stocky steady wide stance, cradling a bundle of short bamboo shoots horizontally in both arms, chest proud, no jump.
+Column 3 panda hiker in green embroidered travel vest and brown satchel, standing and leaning one paw on a tall green bamboo walking staff, other paw resting on belly, relaxed friendly stance.
+ROW 3 lavender-grey kitten with creamy chest and golden purple eyes:
+Column 1 unclothed kitten in natural low playful STRETCH on four paws, forelegs reaching forward, chest close to ground, haunches raised, tail curled upward behind, looking toward viewer.
+Column 2 kitten wearing purple little vest, sitting upright tail wrapped beside paws, one front paw raised to mouth in a washing/licking-paw pose, clearly feline.
+Column 3 kitten wearing purple astronomical explorer vest and brown satchel, sitting on haunches holding small brass spyglass with both paws to one eye pointed diagonally upward, tail curled beside legs, curious astronomer pose.
+Avoid identical generic human arms-up poses, generic pointing, giant capes, halos, levitation, crowns, extra limbs, disconnected props, text and watermarks. Transparent RGBA background.
+
+Generated with the built-in image_gen tool. Saved as dist/assets/companions/species-poses-v4.png; source PNG unchanged.
