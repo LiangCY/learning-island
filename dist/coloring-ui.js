@@ -1,6 +1,7 @@
+import {createArtworkPuzzleUI} from './artwork-puzzle-ui.js';
 import {createArtWallUI} from './art-wall-ui.js';
 import {BOARDS,BOARD_BY_ID,BOARD_CATEGORIES,RETIRED_BOARDS} from './coloring-boards.js';
-import {SOLID_COLORS,GRADIENTS,PAINT_BY_ID,EFFECTS,INITIAL_GAME_COINS,COINS_PER_ANSWER,normalizeDrawing,purchaseBoard,saveDrawing,saveArtwork,deleteArtwork,drawingProgress} from './coloring.js';
+import {SOLID_COLORS,GRADIENTS,PAINT_BY_ID,EFFECTS,normalizeDrawing,purchaseBoard,saveDrawing,saveArtwork,deleteArtwork,drawingProgress} from './coloring.js';
 import {coloringSVG,coloringCanvas,escapeText as esc} from './coloring-art.js';
 
 export function createColoringUI({app,modal,storage,game,history,isActive,go,visitRoom,onRouteChange=()=>{},toast,chime}){
@@ -9,6 +10,8 @@ export function createColoringUI({app,modal,storage,game,history,isActive,go,vis
  const read=()=>game.read();
  const wallUI=createArtWallUI({app,modal,read,history,wallet:game.wallet,transaction,dialog,render,visitRoom,toast,navigate:next=>{if(next==='earn'){go('home');return;}tab=next;render();}});
  const isEditor=()=>isActive()&&!!app.querySelector('#coloring-stage');
+ const puzzleUI=createArtworkPuzzleUI({app,modal,read,history,transaction,isActive:()=>isActive()&&tab==='puzzle',toast,chime,onRouteChange:params=>onRouteChange({tab:'puzzle',...params}),renderPicker:()=>{tab='puzzle';render();},openTab:switchTab,dialog});
+ function switchTab(next){if(beforeLeave()){tab=next;render();}}
  const coin=n=>`<span class="game-coin" aria-hidden="true">✦</span> ${n}`;
  function transaction(change){
   pending++;
@@ -19,17 +22,16 @@ export function createColoringUI({app,modal,storage,game,history,isActive,go,vis
   for(const w of works.filter(w=>w.effect==='pixel')){const target=app.querySelector(`[data-pixel="${w.id}"]`);if(target)coloringCanvas(w.boardId,w,480).then(c=>{if(target.isConnected)target.replaceChildren(c);}).catch(()=>{});}
  }
  function render(){
+  puzzleUI.stop();
   editor=null;undo=[];redo=[];saveFailed=false;
   const state=read(),wallet=game.wallet(),owned=new Set(state.purchases.map(p=>p.boardId));
   app.innerHTML=`<div class="games-page"><button class="text-btn game-lobby-back" id="game-lobby">← 游戏大厅</button><section class="games-intro"><div><div class="eyebrow"><span></span> A LITTLE PLAY, A LOT OF COLOR</div><h1>认真学，也要开心玩。</h1><p>把练习收获的游戏币，变成自己的小小创作。</p></div><div class="game-wallet"><span>我的游戏币</span><strong>${coin(wallet.balance)}</strong><button class="text-btn" id="game-earn">答题赚币 ↗</button></div></section>
-  ${['shop','gallery'].includes(tab)?`<section class="coloring-banner"><div class="coloring-banner-copy"><span class="game-kicker">小游戏 01 · 涂色小画室</span><h2>今天，世界是什么颜色？</h2><p>选个颜色，轻点色块。<br>${BOARDS.length} 张画板，装下天马行空的想象。</p><div class="game-features"><span>${SOLID_COLORS.length} 色 + ${GRADIENTS.length} 种渐变</span><span>${EFFECTS.length} 种画材与效果</span><span>作品随心收藏</span></div></div><div class="banner-art" aria-hidden="true">${coloringSVG('cat',{colors:{'area-0':'#fff4d5','area-1':'#ace8d3','area-2':'#ffbf80','area-3':'#ffbf80','area-4':'#fff4d5','area-5':'#ffbf80','area-6':'#ffbf80','area-7':'#ffbad0','area-8':'#ffbad0','area-9':'#ffbf80','area-10':'#ffbad0','area-11':'#ffbad0','area-12':'#ee5988','area-13':'#fff4d5','area-14':'#fff4d5','area-15':'#ffda48','area-16':'#ffda48','area-17':'#ffda48','area-18':'#ffda48','area-19':'#ffda48','area-20':'#e47747','area-21':'#4eb595','area-22':'g-berry'}})}<span>一点一点，涂出好心情 ✦</span></div></section>
-  <div class="game-rule"><span>✦ 初始赠送 ${INITIAL_GAME_COINS} 币</span><span>每填答 1 题 +${COINS_PER_ANSWER} 币，交卷后到账，答错也有奖励</span><span>画板买一次，永久畅涂</span></div>`:''}
-  <div class="game-tabs" aria-label="画室页面"><button data-game-tab="shop" class="${tab==='shop'?'active':''}" aria-pressed="${tab==='shop'}">画板商店 <small>${BOARDS.length}</small></button><button data-game-tab="gallery" class="${tab==='gallery'?'active':''}" aria-pressed="${tab==='gallery'}">我的作品 <small>${state.works.length}</small></button><button data-game-tab="wall" class="${tab==='wall'?'active':''}" aria-pressed="${tab==='wall'}">作品展示墙</button><button data-game-tab="frames" class="${tab==='frames'?'active':''}" aria-pressed="${tab==='frames'}">画框商店</button><span>游戏币独立于小屋叶子币 · 历史填答也计入</span></div>
-  ${tab==='shop'?`<div class="board-filters"><div>${BOARD_CATEGORIES.map(c=>`<button class="${category===c?'active':''}" data-category="${c}" aria-pressed="${category===c}">${c}</button>`).join('')}</div><button id="owned-boards" class="${ownedOnly?'active':''}" aria-pressed="${ownedOnly}">✓ 只看已拥有（${owned.size}）</button></div><div class="board-grid">${[...BOARDS,...RETIRED_BOARDS.filter(b=>owned.has(b.id))].filter(b=>(category==='全部画板'||b.category===category)&&(!ownedOnly||owned.has(b.id))).sort((a,b)=>Number(owned.has(a.id))-Number(owned.has(b.id))||a.price-b.price).map((b,i)=>`<article class="board-card"><button class="board-open" data-board="${b.id}" aria-label="${owned.has(b.id)?'开始涂色':'预览画板'}：${b.name}">${preview(b,{},i)}<span class="board-badge">${owned.has(b.id)?'✓ 已拥有':b.category}</span></button><div class="board-caption"><h3>${b.name}</h3><p>${b.regions.length} 个色块 · ${b.description}</p><button data-board="${b.id}" class="board-cta ${owned.has(b.id)?'owned':''}">${owned.has(b.id)?state.drafts[b.id]&&Object.keys(state.drafts[b.id].colors).length?'继续涂色 →':'开始涂色 →':`解锁画板 <strong>${coin(b.price)}</strong>`}</button></div></article>`).join('')||'<div class="game-empty"><span>✎</span><h2>这里还没有画板</h2><p>试试其他分类，或用初始游戏币解锁一张。</p></div>'}</div>`:tab==='gallery'?gallery(state):tab==='wall'?wallUI.wall(state):wallUI.shop(state)}
+  <div class="game-tabs coloring-tabs" aria-label="画室页面"><button data-game-tab="shop" class="${tab==='shop'?'active':''}" aria-pressed="${tab==='shop'}">画板商店 <small>${BOARDS.length}</small></button><button data-game-tab="gallery" class="${tab==='gallery'?'active':''}" aria-pressed="${tab==='gallery'}">我的作品 <small>${state.works.length}</small></button><button data-game-tab="wall" class="${tab==='wall'?'active':''}" aria-pressed="${tab==='wall'}">作品展示墙</button><button data-game-tab="frames" class="${tab==='frames'?'active':''}" aria-pressed="${tab==='frames'}">画框商店</button><button data-game-tab="puzzle" class="${tab==='puzzle'?'active':''}" aria-pressed="${tab==='puzzle'}">作品拼图</button><span>游戏币独立于小屋叶子币 · 历史填答也计入</span></div>
+  ${tab==='shop'?`<div class="board-filters"><div>${BOARD_CATEGORIES.map(c=>`<button class="${category===c?'active':''}" data-category="${c}" aria-pressed="${category===c}">${c}</button>`).join('')}</div><button id="owned-boards" class="${ownedOnly?'active':''}" aria-pressed="${ownedOnly}">✓ 只看已拥有（${owned.size}）</button></div><div class="board-grid">${[...BOARDS,...RETIRED_BOARDS.filter(b=>owned.has(b.id))].filter(b=>(category==='全部画板'||b.category===category)&&(!ownedOnly||owned.has(b.id))).sort((a,b)=>Number(owned.has(a.id))-Number(owned.has(b.id))||a.price-b.price).map((b,i)=>`<article class="board-card"><button class="board-open" data-board="${b.id}" aria-label="${owned.has(b.id)?'开始涂色':'预览画板'}：${b.name}">${preview(b,{},i)}<span class="board-badge">${owned.has(b.id)?'✓ 已拥有':b.category}</span></button><div class="board-caption"><h3>${b.name}</h3><p>${b.regions.length} 个色块 · ${b.description}</p><button data-board="${b.id}" class="board-cta ${owned.has(b.id)?'owned':''}">${owned.has(b.id)?state.drafts[b.id]&&Object.keys(state.drafts[b.id].colors).length?'继续涂色 →':'开始涂色 →':`解锁画板 <strong>${coin(b.price)}</strong>`}</button></div></article>`).join('')||'<div class="game-empty"><span>✎</span><h2>这里还没有画板</h2><p>试试其他分类，或用初始游戏币解锁一张。</p></div>'}</div>`:tab==='gallery'?gallery(state):tab==='wall'?wallUI.wall(state):tab==='puzzle'?puzzleUI.picker(state):wallUI.shop(state)}
   <p class="game-local-note">画板、画框、草稿、作品和上墙布置保存在当前浏览器。喜欢的作品记得下载一份，留住你的灵感。</p></div>`;
   app.querySelector('#game-lobby').onclick=()=>go('games',{});
   app.querySelector('#game-earn').onclick=()=>go('home');
-  app.querySelectorAll('[data-game-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.gameTab;render();});
+  app.querySelectorAll('[data-game-tab]').forEach(b=>b.onclick=()=>switchTab(b.dataset.gameTab));
   app.querySelectorAll('[data-category]').forEach(b=>b.onclick=()=>{category=b.dataset.category;render();});
   app.querySelector('#owned-boards')?.addEventListener('click',()=>{ownedOnly=!ownedOnly;render();});
   app.querySelectorAll('[data-board]').forEach(b=>b.onclick=()=>selectBoard(b.dataset.board));
@@ -37,11 +39,13 @@ export function createColoringUI({app,modal,storage,game,history,isActive,go,vis
   app.querySelectorAll('[data-download-work]').forEach(b=>b.onclick=()=>download(read().works.find(w=>w.id===b.dataset.downloadWork),b));
   app.querySelectorAll('[data-delete-work]').forEach(b=>b.onclick=()=>deleteWork(b.dataset.deleteWork));
   app.querySelector('#gallery-shop')?.addEventListener('click',()=>{tab='shop';render();});pixelPreviews(state.works);wallUI.bind(state);
+  if(tab==='puzzle')puzzleUI.bindPicker();
+  app.querySelectorAll('[data-puzzle-from-work]').forEach(b=>b.onclick=()=>{puzzleUI.choose(b.dataset.puzzleFromWork);switchTab('puzzle');});
   onRouteChange(routeParams());
  }
- function gallery(state){return state.works.length?`<div class="board-grid gallery-grid">${state.works.map((w,i)=>`<article class="board-card"><button class="board-open" data-edit-work="${w.id}" aria-label="继续编辑：${esc(w.name)}">${preview(BOARD_BY_ID[w.boardId],w,i)}</button><div class="board-caption"><h3>${esc(w.name)}</h3><p>${EFFECTS.find(e=>e.id===w.effect).name} · ${w.date?new Date(w.date).toLocaleDateString('zh-CN',{timeZone:'Asia/Shanghai'}):'已收藏'}</p><div class="work-actions"><button class="text-btn" data-hang-work="${w.id}">装框上墙</button><button class="text-btn" data-edit-work="${w.id}">继续创作</button><button class="text-btn" data-download-work="${w.id}">下载 PNG</button><button class="text-btn" data-delete-work="${w.id}" aria-label="删除作品：${esc(w.name)}">删除</button></div></div></article>`).join('')}</div>`:`<div class="game-empty"><span>▧</span><h2>第一幅作品，等你来画。</h2><p>涂好喜欢的画板，点「保存作品」，就会收藏在这里。</p><button class="primary" id="gallery-shop">去挑一张画板</button></div>`;}
+ function gallery(state){return state.works.length?`<div class="board-grid gallery-grid">${state.works.map((w,i)=>`<article class="board-card"><button class="board-open" data-edit-work="${w.id}" aria-label="继续编辑：${esc(w.name)}">${preview(BOARD_BY_ID[w.boardId],w,i)}</button><div class="board-caption"><h3>${esc(w.name)}</h3><p>${EFFECTS.find(e=>e.id===w.effect).name} · ${w.date?new Date(w.date).toLocaleDateString('zh-CN',{timeZone:'Asia/Shanghai'}):'已收藏'}</p><div class="work-actions"><button class="text-btn" data-puzzle-from-work="${w.id}">拼成拼图</button><button class="text-btn" data-hang-work="${w.id}">装框上墙</button><button class="text-btn" data-edit-work="${w.id}">继续创作</button><button class="text-btn" data-download-work="${w.id}">下载 PNG</button><button class="text-btn" data-delete-work="${w.id}" aria-label="删除作品：${esc(w.name)}">删除</button></div></div></article>`).join('')}</div>`:`<div class="game-empty"><span>▧</span><h2>第一幅作品，等你来画。</h2><p>涂好喜欢的画板，点「保存作品」，就会收藏在这里。</p><button class="primary" id="gallery-shop">去挑一张画板</button></div>`;}
  function dialog(content){modal.classList.add('coloring-modal');document.querySelector('#modal-content').innerHTML=content;modal.showModal();}
- modal.addEventListener('close',()=>{modal.classList.remove('coloring-modal');if(!modal.open&&isActive()&&!isEditor())render();},{signal:events.signal});
+ modal.addEventListener('close',()=>{modal.classList.remove('coloring-modal');if(!modal.open&&isActive()&&!isEditor()&&!puzzleUI.isPlaying())render();},{signal:events.signal});
  function selectBoard(id){
   const state=read(),b=BOARD_BY_ID[id];if(state.purchases.some(p=>p.boardId===id)){openEditor(id);return;}
   const balance=game.wallet().balance,enough=balance>=b.price;
@@ -120,14 +124,15 @@ export function createColoringUI({app,modal,storage,game,history,isActive,go,vis
   dialog(`<h2>删除「${esc(w.name)}」？</h2><p>会从作品集和小屋展示墙移除这幅作品。已购买的画板和草稿仍然保留。</p><div class="dialog-actions"><button class="secondary" id="delete-cancel">保留作品</button><button class="primary" id="delete-confirm">删除作品</button></div>`);
   document.querySelector('#delete-cancel').onclick=()=>modal.close();document.querySelector('#delete-confirm').onclick=async e=>{const b=e.currentTarget;b.disabled=true;try{await transaction(s=>deleteArtwork(s,history(),id));modal.close();render();}catch(err){toast(err.message);b.disabled=false;}};
  }
- function beforeLeave(){if(isEditor()&&(saveFailed||pending)){toast(saveFailed?'草稿尚未保存，请先下载作品，并点「重试保存草稿」。':'正在保存，请稍等一下再离开画室。');return false;}return true;}
+ function beforeLeave(){if(!puzzleUI.beforeLeave())return false;if(isEditor()&&(saveFailed||pending)){toast(saveFailed?'草稿尚未保存，请先下载作品，并点「重试保存草稿」。':'正在保存，请稍等一下再离开画室。');return false;}return true;}
  window.addEventListener('beforeunload',e=>{if(pending||saveFailed){e.preventDefault();e.returnValue='';}},{signal:events.signal});
  window.addEventListener('keydown',e=>{if(!isEditor()||modal.open||e.target.matches('input,textarea')||!(e.ctrlKey||e.metaKey))return;if(e.key.toLowerCase()==='z'){e.preventDefault();e.shiftKey?redoPaint():undoPaint();}else if(e.key.toLowerCase()==='y'){e.preventDefault();redoPaint();}},{signal:events.signal});
- window.addEventListener('storage',e=>{if(['math-island-v1:games','math-island-v1:history'].includes(e.key)&&isActive()&&!isEditor()&&!modal.open)render();},{signal:events.signal});
- function routeParams(){return editor?{tab:'studio',board:editor.boardId,work:editor.workId,from:tab}:{tab,...(tab==='wall'?{room:wallUI.getRoom()}:{})};}
+ window.addEventListener('storage',e=>{if(['math-island-v1:games','math-island-v1:history'].includes(e.key)&&isActive()&&!isEditor()&&!modal.open){if(puzzleUI.isPlaying())puzzleUI.handleStorage();else render();}},{signal:events.signal});
+ function routeParams(){return editor?{tab:'studio',board:editor.boardId,work:editor.workId,from:tab}:{tab,...(tab==='wall'?{room:wallUI.getRoom()}:tab==='puzzle'?puzzleUI.routeParams():{})};}
  function openRoute(params={}){
-  tab=['shop','gallery','wall','frames'].includes(params.tab)?params.tab:['shop','gallery','wall','frames'].includes(params.from)?params.from:'shop';
+  tab=['shop','gallery','wall','frames','puzzle'].includes(params.tab)?params.tab:['shop','gallery','wall','frames','puzzle'].includes(params.from)?params.from:'shop';
   wallUI.setRoom(params.room);
+  if(params.tab==='puzzle'){editor=null;puzzleUI.openRoute(params);return;}
   if(params.tab==='studio'){
    const state=read(),work=params.work?state.works.find(w=>w.id===params.work):null;
    if(Object.hasOwn(BOARD_BY_ID,params.board)&&state.purchases.some(p=>p.boardId===params.board)&&(!params.work||work?.boardId===params.board)){openEditor(params.board,work,true);return;}
@@ -135,5 +140,5 @@ export function createColoringUI({app,modal,storage,game,history,isActive,go,vis
   }
   render();
  }
- return {render,beforeLeave,routeParams,openRoute,dispose:()=>{events.abort();editor=null;},showWall:room=>{wallUI.setRoom(room);tab='wall';render();}};
+ return {render,beforeLeave,routeParams,openRoute,dispose:()=>{puzzleUI.dispose();events.abort();editor=null;},showWall:room=>{wallUI.setRoom(room);tab='wall';render();}};
 }

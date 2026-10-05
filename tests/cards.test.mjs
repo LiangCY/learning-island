@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {CARDS,CARD_BY_ID,DECKS,RARITIES,deckId,probabilities,intensity,normalizeCollection,pendingTickets,inventory,pickCard,redeem} from '../dist/cards.js';
+import {CARDS,CARD_BY_ID,DECKS,RARITIES,deckId,probabilities,intensity,normalizeCollection,pendingTickets,inventory,pickCard,redeem,redeemBatch} from '../dist/cards.js';
 const round=(id,count=20)=>({id,cardTicket:true,date:'2026-10-03T04:00:00.000Z',details:Array.from({length:count},()=>({userAnswer:'7'}))});
 const date='2026-10-03T04:10:00.000Z';
 const sequence=(...values)=>()=>values.shift();
@@ -84,10 +84,11 @@ test('每轮只有一次机会，未使用可积攒，重复历史和旧记录�
  assert.throws(()=>redeem(history,out.collection,'old','peppa'),/已经抽过/);assert.throws(()=>redeem(history,null,'legacy','peppa'),/没有可用/);assert.throws(()=>redeem(history,null,'nonexistent','peppa'),/没有可用/);
 });
 test('刷新后抽卡结果和机会保持不变，重复卡累积数量和首次日期',()=>{
- const history=[round('two'),round('one')],one=redeem(history,null,'one','pony',sequence(.9,0),date);
- const loaded=normalizeCollection(JSON.parse(JSON.stringify(one.collection)));assert.deepEqual(loaded,one.collection);assert.equal(one.isNew,true);
+ const owned=CARDS.filter(c=>c.deck==='pony'&&c.rarity==='SSR').map((c,i)=>({roundId:'owned'+i,cardId:c.id,date,intensity:20}));
+ const history=[round('two'),round('one')],one=redeem(history,{draws:owned},'one','pony',sequence(.9,0),date);
+ const loaded=normalizeCollection(JSON.parse(JSON.stringify(one.collection)));assert.deepEqual(loaded,one.collection);assert.equal(one.isNew,false);assert.equal(one.copies,2);
  const two=redeem(history,loaded,'two','pony',sequence(.9,0),'2026-10-04T04:00:00.000Z');
- assert.equal(two.isNew,false);assert.equal(two.copies,2);assert.deepEqual(inventory(two.collection)[one.card.id],{count:2,firstDate:date});assert.equal(pendingTickets(history,two.collection).length,0);
+ assert.equal(two.isNew,false);assert.equal(two.copies,3);assert.deepEqual(inventory(two.collection)[one.card.id],{count:3,firstDate:date});assert.equal(pendingTickets(history,two.collection).length,0);
 });
 test('存储损坏安全回退，未知卡组、未知卡片、重复开奖和异常日期被过滤',()=>{
  for(const value of [null,undefined,[],{draws:'bad',selectedDeck:'constructor'}])assert.deepEqual(normalizeCollection(value),empty());
@@ -108,8 +109,58 @@ test('批量按先后使用积攒机会，每张保留原题量概率且全部�
  const source=empty();let calls=0;assert.throws(()=>redeemBatch(history,source,2,'bluey',()=>++calls===3?NaN:.2,date));assert.equal(source.draws.length,0);
 });
 
-test('十连抽保留十个唯一机会并正确累计重复卡，不能超额扣次',async()=>{
+test('十连抽同档未抽遍前不重复，超出角色数后累计重复卡且不能超额扣次',async()=>{
  const {redeemBatch}=await import('../dist/cards.js');const history=Array.from({length:12},(_,i)=>round('batch'+i));
  const out=redeemBatch(history,null,10,'bluey',()=>0,date);assert.equal(out.collection.draws.length,10);assert.equal(new Set(out.collection.draws.map(d=>d.roundId)).size,10);assert.equal(pendingTickets(history,out.collection).length,2);
- assert.equal(out.outcomes.filter(o=>o.isNew).length,1);assert.equal(Object.values(inventory(out.collection))[0].count,10);assert.throws(()=>redeemBatch(history,out.collection,3,'bluey'),/次数不够/);assert.equal(out.collection.draws.length,10);
+ assert.equal(out.outcomes.filter(o=>o.isNew).length,8);assert.equal(new Set(out.outcomes.slice(0,8).map(o=>o.card.id)).size,8);assert.ok(out.outcomes.every(o=>o.card.rarity==='R'));assert.equal(inventory(out.collection)[out.outcomes[0].card.id].count,3);assert.throws(()=>redeemBatch(history,out.collection,3,'bluey'),/次数不够/);assert.equal(out.collection.draws.length,10);
+});
+
+test('单抽优先点亮同档新伙伴，跨卡组及刷新后仍按已有收藏选择',()=>{
+ for(const deck of Object.keys(DECKS)){
+  for(const [rarity,roll] of [['R',.1],['SR',.7],['SSR',.95]]){
+   const tier=CARDS.filter(c=>c.deck===deck&&c.rarity===rarity);
+   let collection=empty();
+   for(let i=0;i<tier.length;i++){
+    const id=`${deck}-${rarity}-${i}`,out=redeem([round(id)],collection,id,deck,sequence(roll,0),date);
+    assert.equal(out.card.id,tier[i].id);assert.equal(out.isNew,true);
+    collection=normalizeCollection(JSON.parse(JSON.stringify(out.collection)));
+   }
+   const out=redeem([round('repeat')],collection,'repeat',deck,sequence(roll,0),date);
+   assert.equal(out.isNew,false);assert.equal(out.card.rarity,rarity);assert.equal(out.copies,2);
+  }
+ }
+ const pony=redeem([round('pony')],null,'pony','pony',sequence(.1,0),date);
+ const bluey=redeem([round('bluey')],pony.collection,'bluey','bluey',sequence(.1,0),date);
+ assert.equal(bluey.isNew,true);assert.equal(bluey.card.id,CARDS.find(c=>c.deck==='bluey'&&c.rarity==='R').id);
+});
+
+test('已集齐及抽到最后一张新卡时，连抽在同档角色用完前仍不重复',()=>{
+ for(const [rarity,roll] of [['R',.1],['SR',.7],['SSR',.95]]){
+  const tier=CARDS.filter(c=>c.deck==='bluey'&&c.rarity===rarity);
+  for(const missing of [0,1]){
+   const owned=tier.slice(missing).map((c,i)=>({roundId:'owned'+i,cardId:c.id,date,intensity:20}));
+   const history=Array.from({length:tier.length+1},(_,i)=>round('ticket'+i));
+   const source={draws:owned},snapshot=JSON.stringify(source);
+   const out=redeemBatch(history,source,tier.length+1,'bluey',sequence(...Array(tier.length+1).fill([roll,0]).flat()),date);
+   assert.equal(new Set(out.outcomes.slice(0,tier.length).map(o=>o.card.id)).size,tier.length);
+   assert.equal(out.outcomes.filter(o=>o.isNew).length,missing);
+   assert.ok(out.outcomes.every(o=>o.card.rarity===rarity));
+   assert.equal(out.outcomes.at(-1).isNew,false);assert.equal(JSON.stringify(source),snapshot);
+  }
+ }
+});
+
+test('收藏优先及批内避重不改变稀有度概率，同档候选仍等概率',()=>{
+ const tier=CARDS.filter(c=>c.deck==='bluey'&&c.rarity==='SR'),ownedCardIds=new Set(tier.slice(0,2).map(c=>c.id));
+ const candidates=tier.slice(2);
+ for(let i=0;i<candidates.length;i++)assert.equal(pickCard('bluey',20,sequence(.7,(i+.5)/candidates.length),{ownedCardIds}).id,candidates[i].id);
+ const full=new Set(tier.map(c=>c.id)),batchCardIds=new Set(tier.slice(0,2).map(c=>c.id));
+ for(let i=0;i<candidates.length;i++)assert.equal(pickCard('bluey',20,sequence(.7,(i+.5)/candidates.length),{ownedCardIds:full,batchCardIds}).id,candidates[i].id);
+ let seed=54321;const rng=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
+ for(const count of [20,30,60]){
+  const totals={R:0,SR:0,SSR:0},runs=20000;
+  const owned=new Set(CARDS.filter(c=>c.deck==='bluey'&&c.index%2===0).map(c=>c.id));
+  for(let i=0;i<runs;i++)totals[pickCard('bluey',count,rng,{ownedCardIds:owned,batchCardIds:owned}).rarity]++;
+  for(const [r,p] of Object.entries(probabilities(count)))assert.ok(Math.abs(totals[r]/runs*100-p)<1,`${count}题 ${r}: ${totals[r]/runs*100}%`);
+ }
 });

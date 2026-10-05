@@ -76,7 +76,7 @@ export function createGamePlatform({storage,history,registry,locks=globalThis.na
 export function resolveGameRoute(params,registry){
  if(params.game)return registry.get(params.game)?{id:params.game,params}:null;
  // Bookmarked studio, gallery and room links from before the game lobby.
- if(['shop','gallery','wall','frames','studio'].includes(params.tab)&&registry.get('coloring'))return {id:'coloring',params};
+ if(['shop','gallery','wall','frames','studio','puzzle'].includes(params.tab)&&registry.get('coloring'))return {id:'coloring',params};
  return null;
 }
 

@@ -1,5 +1,6 @@
 import {FRAME_BY_ID,ART_ROOMS,WALL_SLOTS,ownsFrame} from './art-frames.js';
 import {BOARD_BY_ID} from './coloring-boards.js';
+import {normalizePuzzles,savePuzzle} from './artwork-puzzle.js';
 import {INITIAL_GAME_COINS,COINS_PER_ANSWER,gameRewards,gameEarnings,walletBalance} from './game-wallet.js';
 export {INITIAL_GAME_COINS,COINS_PER_ANSWER,gameRewards,gameEarnings};
 const colorRows=[
@@ -62,7 +63,18 @@ export function normalizeGames(value,history=[]){
   if(!ART_ROOMS.some(r=>r.id===p?.room)||!WALL_SLOTS.some(s=>s.id===p?.slot)||!seen.has(p?.workId)||!frames.has(p?.frameId))return [];
   const key=p.room+':'+p.slot;if(slots.has(key))return [];slots.add(key);return [{room:p.room,slot:p.slot,workId:p.workId,frameId:p.frameId}];
  });
- return {version:2,purchases,framePurchases,drafts,works,wall};
+ const puzzles=value?.puzzles?normalizePuzzles(value.puzzles,source=>{
+  const drawing=normalizeDrawing(source,source?.boardId);
+  return drawing&&Object.keys(drawing.colors).length&&typeof source?.id==='string'&&/^[\w-]{1,80}$/.test(source.id)?{...drawing,id:source.id,name:typeof source.name==='string'?source.name.slice(0,40):BOARD_BY_ID[source.boardId].name}:null;
+ }):null;
+ return {version:2,purchases,framePurchases,drafts,works,wall,...(puzzles?{puzzles}:{})};
+}
+export function saveArtworkPuzzle(value,history,session){
+ const state=normalizeGames(value,history);
+ state.puzzles=savePuzzle(state.puzzles,session);
+ const normalized=normalizeGames(state,history);
+ if(!normalized.puzzles.current)throw Error('拼图作品无效');
+ return normalized;
 }
 export function gameWallet(state,history=[]){if(state?.version===3)return walletBalance(state.wallet,history);const earned=gameEarnings(history),spent=[...state.purchases,...(state.framePurchases||[])].reduce((n,p)=>n+p.paid,0);return {earned,spent,balance:earned-spent};}
 export function purchaseBoard(value,history,boardId){

@@ -115,19 +115,26 @@ export function pendingTickets(history,collection){
 }
 export function inventory(collection){const items={};for(const d of collection.draws){const item=items[d.cardId]||{count:0,firstDate:d.date};item.count++;if(d.date<item.firstDate)item.firstDate=d.date;items[d.cardId]=item;}return items;}
 function sample(rng){const value=rng();if(!Number.isFinite(value)||value<0||value>=1)throw new Error('抽卡随机值不正确');return value;}
-export function pickCard(deck,count,rng=Math.random){
+export function pickCard(deck,count,rng=Math.random,{ownedCardIds=new Set(),batchCardIds=new Set()}={}){
  if(!Object.hasOwn(DECKS,deck))throw new Error('卡组不存在');
  const weights=probabilities(count),roll=sample(rng)*100;let cumulative=0,rarity='SSR';
  for(const [key,weight] of Object.entries(weights)){cumulative+=weight;if(roll<cumulative){rarity=key;break;}}
- const pool=CARDS.filter(c=>c.deck===deck&&c.rarity===rarity);
+ const tier=CARDS.filter(c=>c.deck===deck&&c.rarity===rarity);
+ // Keep the rarity roll unchanged; choose new friends before repeat copies.
+ const unowned=tier.filter(c=>!ownedCardIds.has(c.id));
+ const unused=tier.filter(c=>!batchCardIds.has(c.id));
+ const pool=unowned.length?unowned:unused.length?unused:tier;
  return pool[Math.floor(sample(rng)*pool.length)];
 }
 export function redeem(history,value,roundId,deck,rng=Math.random,date=new Date().toISOString()){
+ return redeemTicket(history,value,roundId,deck,rng,date,new Set());
+}
+function redeemTicket(history,value,roundId,deck,rng,date,batchCardIds){
  const collection=normalizeCollection(value);
  if(collection.draws.some(d=>d.roundId===roundId))throw new Error('这轮已经抽过卡了');
  const round=pendingTickets(history,collection).find(r=>r.id===roundId);
  if(!round)throw new Error('这轮没有可用的抽卡机会');
- const count=Math.min(60,intensity(round)),card=pickCard(deck,count,rng);
+ const count=Math.min(60,intensity(round)),card=pickCard(deck,count,rng,{ownedCardIds:new Set(collection.draws.map(d=>d.cardId)),batchCardIds});
  if(!Number.isFinite(Date.parse(date)))throw new Error('抽卡日期不正确');
  const repeat=inventory(collection)[card.id]?.count||0;
  const draw={roundId,cardId:card.id,date,intensity:count};
@@ -139,6 +146,7 @@ export function redeemBatch(history,value,count,deck,rng=Math.random,date=new Da
  if(!Number.isInteger(count)||count<1||count>10)throw Error('每次可以一起抽 1–10 张');
  let collection=normalizeCollection(value);const tickets=pendingTickets(history,collection);
  if(tickets.length<count)throw Error('抽卡次数不够，先完成练习再来吧');
- const outcomes=[];for(const ticket of tickets.slice(0,count)){const outcome=redeem(history,collection,ticket.id,deck,rng,date);outcomes.push(outcome);collection=outcome.collection;}
+ const outcomes=[],batchCardIds=new Set();
+ for(const ticket of tickets.slice(0,count)){const outcome=redeemTicket(history,collection,ticket.id,deck,rng,date,batchCardIds);outcomes.push(outcome);collection=outcome.collection;batchCardIds.add(outcome.card.id);}
  return {collection,outcomes};
 }
